@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 #define _GNU_SOURCE
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -181,7 +180,7 @@ static int get_type_for_req(struct afb_req req, enum type *type)
 	afb_req_fail(req, "unknown-type", NULL);
 	return 0;
 }
-	
+
 /*
  * Get the last known position
  *
@@ -210,6 +209,24 @@ static void get_gps(struct afb_req req)
 	enum type type;
 	if (get_type_for_req(req, &type))
 		afb_req_success(req, position(type), NULL);
+}
+
+/*
+ *
+ */
+static void get_gyr(struct afb_req req)
+{
+
+}
+
+static void get_acc(struct afb_req req)
+{
+
+}
+
+static void get_mag(struct afb_req req)
+{
+
 }
 
 /*
