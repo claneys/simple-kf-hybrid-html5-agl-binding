@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015, 2016 "IoT.bzh"
- * Author "Manuel Bachmann"
+ * Author "Romain Forlot"
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,126 +26,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include "lsm9ds0.h"
+
 #include <json-c/json.h>
 
 #include <systemd/sd-event.h>
 
 #include <afb/afb-binding.h>
 #include <afb/afb-service-itf.h>
-
-/***************************************************************************************/
-/***************************************************************************************/
-/**                                                                                   **/
-/**                                                                                   **/
-/**       SECTION: HANDLING OF CONNECTION                                             **/
-/**                                                                                   **/
-/**                                                                                   **/
-/***************************************************************************************/
-/***************************************************************************************/
-/* declare the connection routine */
-static int connection();
-
-/*
- * called on an event on the NMEA stream
- */
-static int on_event(sd_event_source *s, int fd, uint32_t revents, void *userdata)
-{
-	/* read available data */
-	if ((revents & EPOLLIN) != 0) {
-		nmea_read(fd);
-		event_send();
-	}
-
-	/* check if error or hangup */
-	if ((revents & (EPOLLERR|EPOLLRDHUP|EPOLLHUP)) != 0) {
-		sd_event_source_unref(s);
-		close(fd);
-		connection(fd);
-	}
-
-	return 0;
-}
-
-/*
- * opens a socket to a host and a service (or port)
- */
-static int open_socket_to(const char *host, const char *service)
-{
-	int rc, fd;
-	struct addrinfo hint, *rai, *iai;
-
-	/* get addr */
-	memset(&hint, 0, sizeof hint);
-	hint.ai_family = AF_INET;
-	hint.ai_socktype = SOCK_STREAM;
-	rc = getaddrinfo(host, service, &hint, &rai);
-	if (rc != 0)
-		return -1;
-
-	/* get the socket */
-	iai = rai;
-	while (iai != NULL) {
-		fd = socket(iai->ai_family, iai->ai_socktype, iai->ai_protocol);
-		if (fd >= 0) {
-			rc = connect(fd, iai->ai_addr, iai->ai_addrlen);
-			if (rc == 0) {
-				fcntl(fd, F_SETFL, O_NONBLOCK);
-				freeaddrinfo(rai);
-				return fd;
-			}
-			close(fd);
-		}
-		iai = iai->ai_next;
-	}
-	freeaddrinfo(rai);
-	return -1;
-}
-
-/*
- * connection to nmea stream for the host and the port
- */
-static int connect_to(const char *host, const char *service, int isgpsd)
-{
-	sd_event_source *source;
-	int rc, fd;
-
-	/* TODO connect to somewhere else */
-	fd = open_socket_to(host, service);
-	if (fd < 0) {
-		ERROR(afbitf, "can't connect to host %s, service %s", host, service);
-		return fd;
-	}
-	if (isgpsd) {
-		static const char gpsdsetup[] = "?WATCH={\"enable\":true,\"nmea\":true};\r\n";
-		write(fd, gpsdsetup, sizeof gpsdsetup - 1);
-	}
-
-	/* adds to the event loop */
-	rc = sd_event_add_io(afb_daemon_get_event_loop(afbitf->daemon), &source, fd, EPOLLIN, on_event, NULL);
-	if (rc < 0) {
-		close(fd);
-		ERROR(afbitf, "can't coonect host %s, service %s to the event loop", host, service);
-	} else {
-		NOTICE(afbitf, "Connected to host %s, service %s", host, service);
-	}
-	return rc;
-}
-
-/*
- * connection to nmea stream
- */
-static int connection()
-{
-	const char *host;
-	const char *service;
-	int isgpsd;
-
-	/* TODO connect to somewhere else */
-	host = getenv("AFBGPS_HOST") ? : "sinagot.net";
-	service = getenv("AFBGPS_SERVICE") ? : "5001";
-	isgpsd = getenv("AFBGPS_ISNMEA") ? 0 : 1;
-	return connect_to(host, service, isgpsd);
-}
 
 /***************************************************************************************/
 /***************************************************************************************/
@@ -182,48 +70,60 @@ static int get_type_for_req(struct afb_req req, enum type *type)
 }
 
 /*
- * Get the last known position
+ * Get Gyroscope values reading from lsm9ds0 on board
+ * 
+ * There isn't parameters needed
  *
- * parameter of the get are:
- *
- *    type:   string: the type of position expected (defaults to "WGS84" if not present)
- *
- * returns the position
- *
- * The valid types are:
- *
- *  +==========+=======================+=======+==========+=======+
- *  | type     |  longitude & latitude | speed | altitude | track |
- *  +==========+=======================+=======+==========+=======+
- *  | WGS84    |      degre            |  m/s  |          |       |
- *  +----------+-----------------------+-------+          |       |
- *  | DMS.km/h |                       | km/h  |          |       |
- *  +----------+                       +-------+   meter  | degre |
- *  | DMS.mph  |   deg°min'sec"X       |  mph  |          |       |
- *  +----------+                       +-------+          |       |
- *  | DMS.kn   |                       |  kn   |          |       |
- *  +==========+=======================+=======+==========+=======+
+ * returns the rotating dps about X, Y and Z (degrees per second)
  */
-static void get_gps(struct afb_req req)
-{
-	enum type type;
-	if (get_type_for_req(req, &type))
-		afb_req_success(req, position(type), NULL);
-}
 
-/*
- *
- */
 static void get_gyr(struct afb_req req)
 {
 
 }
 
-static void get_acc(struct afb_req req)
+/*
+ * Get Accelerometer values reading from lsm9ds0 on board
+ * 
+ * There isn't parameters needed
+ *
+ * returns the X, Y and Z angles in degrees
+ */
+static float get_acc(struct afb_req req)
 {
-
+	struct AccAngles
+	{
+		float Xangle;
+		float Yangle;
+		float Zangle;
+	};
+	struct AccAngles AccAngles;
+	int  accRaw[3];
+    
+	readACC(accRaw);
+	
+	//Convert Accelerometer values to degrees
+	AccAngles.Xangle = (float) (atan2(accRaw[1],accRaw[2])+M_PI)*RAD_TO_DEG;
+    AccAngles.Yangle = (float) (atan2(accRaw[2],accRaw[0])+M_PI)*RAD_TO_DEG;
+	AccAngles.Zangle = (float) (atan2(accRaw[2],accRaw[0])+M_PI)*RAD_TO_DEG;
+	
+	//If IMU is up the correct way, use these lines
+    AccXangle -= (float)180.0;
+    if (AccYangle > 90)
+		AccYangle -= (float)270;
+    else
+        AccYangle += (float)90;
+	
+	return AccAngles
 }
 
+/*
+ * Get Magnetometer values reading from lsm9ds0 on board
+ * 
+ * There isn't parameters needed
+ *
+ * returns the X, Y angles in degrees
+ */
 static void get_mag(struct afb_req req)
 {
 
@@ -301,9 +201,10 @@ static const struct afb_verb_desc_v1 binding_verbs[] = {
   { .name= "get_gyr"  , .session= AFB_SESSION_NONE, .callback= get_gyr , "Get Gyroscop values"},
   { .name= "get_acc"  , .session= AFB_SESSION_NONE, .callback= get_acc , "Get Accelerometer values"},
   { .name= "get_mag"  , .session= AFB_SESSION_NONE, .callback= get_mag , "Get Magnetometer values"},
-  { .name= "get_gps"  , .session= AFB_SESSION_NONE, .callback= get_gps , "Get last GPS values"},
+/* Kept to may be a future usage.
   { .name= "subscribe",    .session= AFB_SESSION_NONE, .callback= subscribe,    .info= "subscribe to notification of position" },
   { .name= "unsubscribe",  .session= AFB_SESSION_NONE, .callback= unsubscribe,  .info= "unsubscribe a previous subscription" },
+*/
   { .name= NULL } /* marker for end of the array */
 };
 
@@ -315,8 +216,8 @@ static const struct afb_binding binding_description =
   /* description conforms to VERSION 1 */
   .type= AFB_BINDING_VERSION_1,
   .v1= {			/* fills the v1 field of the union when AFB_BINDING_VERSION_1 */
-    .info = "GPS+, providing enhanced GPS position, hybrid service",
-    .prefix = "gps+",
+    .info = "Get IMU informations : Gyroscope, Accelerometer and magnetometer",
+    .prefix = "IMU",
     .verbs = binding_verbs	/* the array describing the verbs of the API */
   }
 };

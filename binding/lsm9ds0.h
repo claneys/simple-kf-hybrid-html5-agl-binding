@@ -16,6 +16,7 @@
  */
 
 
+
 // This has to be change depends on i2cdetect 
 // returned addresses
 #define MAG_ADDRESS            0x1E
@@ -106,3 +107,13 @@
 #define TIME_LIMIT          0x3B
 #define TIME_LATENCY        0x3C
 #define TIME_WINDOW         0x3D
+
+void readBlock(uint8_t command, uint8_t size, uint8_t *data);
+void selectDevice(int file, int addr);
+void readACC(int  *a);
+void readMAG(int  *m);
+void readGYR(int *g);
+void writeAccReg(uint8_t reg, uint8_t value);
+void writeMagReg(uint8_t reg, uint8_t value);
+void writeGyrReg(uint8_t reg, uint8_t value);
+void enableIMU();

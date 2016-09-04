@@ -157,10 +157,10 @@ int main(int argc, char *argv[])
 
         //If IMU is up the correct way, use these lines
         AccXangle -= (float)180.0;
-    if (AccYangle > 90)
+		if (AccYangle > 90)
             AccYangle -= (float)270;
-    else
-        AccYangle += (float)90;
+		else
+			AccYangle += (float)90;
 
     //Kalman Filter
     float kalmanX = kalmanFilterX(AccXangle, rate_gyr_x);
