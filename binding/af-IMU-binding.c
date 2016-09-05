@@ -39,6 +39,16 @@
 /***************************************************************************************/
 /**                                                                                   **/
 /**                                                                                   **/
+/**       SECTION: MANAGE IMU DEVICE                                                  **/
+/**                                                                                   **/
+/**                                                                                   **/
+/***************************************************************************************/
+/***************************************************************************************/
+
+/***************************************************************************************/
+/***************************************************************************************/
+/**                                                                                   **/
+/**                                                                                   **/
 /**       SECTION: BINDING VERBS IMPLEMENTATION                                       **/
 /**                                                                                   **/
 /**                                                                                   **/
@@ -71,7 +81,7 @@ static int get_type_for_req(struct afb_req req, enum type *type)
 
 /*
  * Get Gyroscope values reading from lsm9ds0 on board
- * 
+ *
  * There isn't parameters needed
  *
  * returns the rotating dps about X, Y and Z (degrees per second)
@@ -84,7 +94,7 @@ static void get_gyr(struct afb_req req)
 
 /*
  * Get Accelerometer values reading from lsm9ds0 on board
- * 
+ *
  * There isn't parameters needed
  *
  * returns the X, Y and Z angles in degrees
@@ -99,27 +109,27 @@ static float get_acc(struct afb_req req)
 	};
 	struct AccAngles AccAngles;
 	int  accRaw[3];
-    
+
 	readACC(accRaw);
-	
+
 	//Convert Accelerometer values to degrees
 	AccAngles.Xangle = (float) (atan2(accRaw[1],accRaw[2])+M_PI)*RAD_TO_DEG;
     AccAngles.Yangle = (float) (atan2(accRaw[2],accRaw[0])+M_PI)*RAD_TO_DEG;
 	AccAngles.Zangle = (float) (atan2(accRaw[2],accRaw[0])+M_PI)*RAD_TO_DEG;
-	
+
 	//If IMU is up the correct way, use these lines
     AccXangle -= (float)180.0;
     if (AccYangle > 90)
 		AccYangle -= (float)270;
     else
         AccYangle += (float)90;
-	
+
 	return AccAngles
 }
 
 /*
  * Get Magnetometer values reading from lsm9ds0 on board
- * 
+ *
  * There isn't parameters needed
  *
  * returns the X, Y angles in degrees

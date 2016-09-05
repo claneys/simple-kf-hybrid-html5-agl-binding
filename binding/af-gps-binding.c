@@ -917,7 +917,7 @@ static int get_type_for_req(struct afb_req req, enum type *type)
 	afb_req_fail(req, "unknown-type", NULL);
 	return 0;
 }
-	
+
 /*
  * Get the last known position
  *

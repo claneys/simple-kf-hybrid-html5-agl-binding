@@ -108,12 +108,49 @@
 #define TIME_LATENCY        0x3C
 #define TIME_WINDOW         0x3D
 
+/*
+ * Will read from an i2c char device block data
+ * 
+ * parameters of readBlock are:
+ *   command : unsigned 8 bits integer : register address to read
+ * 	 size : unsigned 8 bits integer  : bytes to read
+ * 	 data : unsigned 8 bits integer : pointer use to retrieve data read 
+ */
 void readBlock(uint8_t command, uint8_t size, uint8_t *data);
+
+/*
+ * Select i2c device
+ * 
+ * parameters of selectDevice are:
+ *   file : integer : 
+ * 	 addr : integer  : 
+ * 
+ */
 void selectDevice(int file, int addr);
+
+
 void readACC(int  *a);
 void readMAG(int  *m);
 void readGYR(int *g);
 void writeAccReg(uint8_t reg, uint8_t value);
 void writeMagReg(uint8_t reg, uint8_t value);
 void writeGyrReg(uint8_t reg, uint8_t value);
+
+/*
+ * Enable IMU sensors
+ *
+ * Accelerometer configuration enabled : 
+ * 	z,y,x axis enabled, continuos update,  100Hz data rate
+ * 	Sensitivity : +/- 16G full scale
+ * 
+ * Magnetometer configuration enabled :
+ * 	Temp enable, M data rate = 50Hz
+ * 	Sensitivity : +/-12gauss
+ * 	Continuous-conversion mode
+ * 
+ * Gyroscope configuration enabled :
+ * 	Normal power mode, all axes enabled
+ * 	Continuos update, 2000 dps full scale
+ * 
+ */
 void enableIMU();
