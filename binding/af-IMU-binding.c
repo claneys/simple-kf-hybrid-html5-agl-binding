@@ -26,8 +26,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#include "lsm9ds0.h"
-
 #include <json-c/json.h>
 
 #include <systemd/sd-event.h>
@@ -35,16 +33,95 @@
 #include <afb/afb-binding.h>
 #include <afb/afb-service-itf.h>
 
+#define IMU_DEV "/dev/input/event"
+#define ACC_AXIS 3
+
+// Association code as IMU use absolute values
+char *absolutes[ABS_MAX + 1] = {
+    [0 ... ABS_MAX] = NULL,
+    [ABS_X] = "X",          [ABS_Y] = "Y",
+    [ABS_Z] = "Z",          [ABS_RX] = "Rx",
+    [ABS_RY] = "Ry",        [ABS_RZ] = "Rz",
+    [ABS_THROTTLE] = "Throttle",    [ABS_RUDDER] = "Rudder",
+    [ABS_WHEEL] = "Wheel",      [ABS_GAS] = "Gas",
+    [ABS_BRAKE] = "Brake",      [ABS_HAT0X] = "Hat0X",
+    [ABS_HAT0Y] = "Hat0Y",      [ABS_HAT1X] = "Hat1X",
+    [ABS_HAT1Y] = "Hat1Y",      [ABS_HAT2X] = "Hat2X",
+    [ABS_HAT2Y] = "Hat2Y",      [ABS_HAT3X] = "Hat3X",
+    [ABS_HAT3Y] = "Hat 3Y",     [ABS_PRESSURE] = "Pressure",
+    [ABS_DISTANCE] = "Distance",    [ABS_TILT_X] = "XTilt",
+    [ABS_TILT_Y] = "YTilt",     [ABS_TOOL_WIDTH] = "Tool Width",
+    [ABS_VOLUME] = "Volume",    [ABS_MISC] = "Misc",
+};
+
+enum imu_devices
+{
+    ACC,
+    MAG,
+    GYR
+};
+
+enum Axis
+{
+    X,
+    Y,
+    Z
+}
+
 /***************************************************************************************/
 /***************************************************************************************/
 /**                                                                                   **/
 /**                                                                                   **/
-/**       SECTION: MANAGE IMU DEVICE                                                  **/
+/**       SECTION: HANDLE IMU DEVICE                                                  **/
 /**                                                                                   **/
 /**                                                                                   **/
 /***************************************************************************************/
 /***************************************************************************************/
 
+static int open_dev(int imu_device)
+{
+    char *fname_path[64];
+    snprintf(*fname_path, sizeof(*fname_path), "%s%d", IMU_DEV, imu_device);
+
+    return fname_path;
+}
+
+/*
+ * Get Accelerometer raw values in g linear acceleration
+ */
+
+static int get_Accel_raw()
+{
+    int AccelRaw[3];
+	struct Accel Accel;
+    struct input_absinfo acc_absinfo;
+
+    int i;
+
+    // Limit scan to X, Y and Z axis as Accel only use those one.
+    for (i = 0; i < ACC_AXIS; i++)
+    {
+        if (ioctl(fd, EVIOCGABS(i), &absinfo) < 0)
+        {
+            perror("IOCTL : EVIOVGABS error");
+        }
+        AccelRaw[i] = absinfo.value;
+    }
+
+    return AccelRaw;
+}
+
+static float get_Acc_Angles(int accRaw[3])
+{
+    float AccelAngle[3];
+
+	//Convert Accelerometer values to degrees
+	AccAngle[0] = (float) (atan2(accRaw[1],accRaw[2])+M_PI)*RAD_TO_DEG;
+    AccAngle[1] = (float) (atan2(accRaw[2],accRaw[0])+M_PI)*RAD_TO_DEG;
+	AccAngle[2] = (float) (atan2(accRaw[1],accRaw[0])+M_PI)*RAD_TO_DEG;
+
+	return AccAngle;
+}
 /***************************************************************************************/
 /***************************************************************************************/
 /**                                                                                   **/
@@ -66,9 +143,7 @@ static enum type type_of_name(const char *name)
 		if (strcmp(type_NAMES[result], name) == 0)
 			return result;
 	return type_INVALID;
-}
-
-/*
+}/*
  * extract a valid type from the request
  */
 static int get_type_for_req(struct afb_req req, enum type *type)
@@ -101,30 +176,6 @@ static void get_gyr(struct afb_req req)
  */
 static float get_acc(struct afb_req req)
 {
-	struct AccAngles
-	{
-		float Xangle;
-		float Yangle;
-		float Zangle;
-	};
-	struct AccAngles AccAngles;
-	int  accRaw[3];
-
-	readACC(accRaw);
-
-	//Convert Accelerometer values to degrees
-	AccAngles.Xangle = (float) (atan2(accRaw[1],accRaw[2])+M_PI)*RAD_TO_DEG;
-    AccAngles.Yangle = (float) (atan2(accRaw[2],accRaw[0])+M_PI)*RAD_TO_DEG;
-	AccAngles.Zangle = (float) (atan2(accRaw[2],accRaw[0])+M_PI)*RAD_TO_DEG;
-
-	//If IMU is up the correct way, use these lines
-    AccXangle -= (float)180.0;
-    if (AccYangle > 90)
-		AccYangle -= (float)270;
-    else
-        AccYangle += (float)90;
-
-	return AccAngles
 }
 
 /*
