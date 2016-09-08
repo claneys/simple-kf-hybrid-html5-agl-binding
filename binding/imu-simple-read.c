@@ -13,12 +13,21 @@
 #include <getopt.h>
 #include <ctype.h>
 
+// Check that a bit at a given position is set
 #define test_bit(bit, array) (array[bit/8] & (1<<(bit%8)))
 
+#define IMU_DEV "/dev/input/event"
+
+// Give input device path
 int main(int argc, char *argv[])
 {
+    char *f[64];
+    *f = "Ok111";
+    printf("%s%d\n", IMU_DEV,0);
+
 	int fd;
 	int yalv;
+    // bytes array sized with events type number
 	uint8_t evtype_b[(EV_MAX + 7)/8];
     struct input_absinfo absinfo;
 
@@ -28,6 +37,7 @@ int main(int argc, char *argv[])
 	    exit(1);
 	}
 
+    // fill with 0 evtype_b array
 	memset(evtype_b, 0, sizeof(evtype_b));
 	if (ioctl(fd, EVIOCGBIT(0, EV_MAX), evtype_b) < 0) {
 	    perror("evdev ioctl");
@@ -79,6 +89,7 @@ int main(int argc, char *argv[])
 	    }
 	}
 
+    // Get absolute value from device, just a dumb loop that read all absolute values...
     for (yalv = 0; yalv < ABS_MAX; yalv++) {
         if (ioctl(fd, EVIOCGABS(yalv), &absinfo) < 0) {
             perror("evdev ioctl");
