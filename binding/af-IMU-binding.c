@@ -34,13 +34,16 @@
 #include <afb/afb-service-itf.h>
 
 
-// 180 / pi
+/* Some useful math values
+ * RAD_TO_DEG = 180 / pi 
+ */
 #define RAD_TO_DEG 57.295779513
 #define M_PI  3.14159265358979323846
+
 #define IMU_DEV "/dev/input/event"
 #define NB_AXIS 3
 
-// Association code as IMU use absolute values
+/* Association code as IMU use absolute values */
 char *absolutes[ABS_MAX + 1] = {
     [0 ... ABS_MAX] = NULL,
     [ABS_X] = "X",          [ABS_Y] = "Y",
@@ -68,11 +71,24 @@ char *absolutes[ABS_MAX + 1] = {
 /***************************************************************************************/
 /***************************************************************************************/
 
+/*
+ * @brief Open IMU event device and return file handler
+ * 
+ * IMU event device are :
+ * 	0 : Accelerometer
+ *  1 : Magnetometer
+ *  2 : gyroscop
+ * 
+ * @param integer imu_device: indice of imu event device like described above.
+ * 
+ * @return int fd : file handler of opened device.
+ * 
+ */
 static int open_dev(int imu_device)
 {
     char *fname_path[64];
-	int fd;
-    
+    int fd;
+
 	/* get dev full path */
 	snprintf(*fname_path, sizeof(*fname_path), "%s%d", IMU_DEV, imu_device);
 	
@@ -85,9 +101,12 @@ static int open_dev(int imu_device)
 }
 
 /*
- * Get Accelerometer raw values in g linear acceleration
+ * @brief Get Accelerometer 3 Axis Raw values in g and fill AccellRaw array with it
+ * 
+ * @param integer fd: device file handler
+ * @param integer *AccelRaw: pointer to an integer array that will contains returned values
+ * 
  */
-
 static void get_AccRaw(int fd, int *AccelRaw)
 {
     int i;
@@ -104,11 +123,15 @@ static void get_AccRaw(int fd, int *AccelRaw)
     }
 }
 
-static void get_AccAngles(int accRaw[3], int *AccelAngle)
+/*
+ * @brief Convert gravity in degrees from Accelerometer raw values
+ * 
+ * @param integer accRaw: Accelerometer int array of Raw values
+ * @param float *AccelAngles: pointer to an integer array that will contains returned values
+ * 
+ */
+static void get_AccAngles(int accRaw[3], float *AccelAngle)
 {
-    float AccelAngle[3];
-
-	//Convert Accelerometer values to degrees
 	AccelAngle[0] = (float) (atan2(accRaw[1],accRaw[2])+M_PI)*RAD_TO_DEG;
     AccelAngle[1] = (float) (atan2(accRaw[2],accRaw[0])+M_PI)*RAD_TO_DEG;
 	AccelAngle[2] = (float) (atan2(accRaw[1],accRaw[0])+M_PI)*RAD_TO_DEG;
