@@ -41,6 +41,10 @@
 #define M_PI  3.14159265358979323846
 
 #define IMU_DEV "/dev/input/event"
+#define IMU_ACC 0
+#define IMU_MAG 1
+#define IMU_GYR 2
+
 #define NB_AXIS 3
 
 /* Association code as IMU use absolute values */
