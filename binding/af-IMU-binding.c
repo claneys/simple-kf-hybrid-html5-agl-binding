@@ -136,6 +136,7 @@ static void get_AccRaw(int fd, int *AccelRaw)
  */
 static void get_AccAngles(int accRaw[3], float *AccelAngle)
 {
+	//  TODO : Checks these formula...
 	AccelAngle[0] = (float) (atan2(accRaw[1],accRaw[2])+M_PI)*RAD_TO_DEG;
     AccelAngle[1] = (float) (atan2(accRaw[2],accRaw[0])+M_PI)*RAD_TO_DEG;
 	AccelAngle[2] = (float) (atan2(accRaw[1],accRaw[0])+M_PI)*RAD_TO_DEG;
