@@ -33,8 +33,12 @@
 #include <afb/afb-binding.h>
 #include <afb/afb-service-itf.h>
 
+
+// 180 / pi
+#define RAD_TO_DEG 57.295779513
+#define M_PI  3.14159265358979323846
 #define IMU_DEV "/dev/input/event"
-#define ACC_AXIS 3
+#define NB_AXIS 3
 
 // Association code as IMU use absolute values
 char *absolutes[ABS_MAX + 1] = {
@@ -54,20 +58,6 @@ char *absolutes[ABS_MAX + 1] = {
     [ABS_VOLUME] = "Volume",    [ABS_MISC] = "Misc",
 };
 
-enum imu_devices
-{
-    ACC,
-    MAG,
-    GYR
-};
-
-enum Axis
-{
-    X,
-    Y,
-    Z
-}
-
 /***************************************************************************************/
 /***************************************************************************************/
 /**                                                                                   **/
@@ -81,22 +71,27 @@ enum Axis
 static int open_dev(int imu_device)
 {
     char *fname_path[64];
-    snprintf(*fname_path, sizeof(*fname_path), "%s%d", IMU_DEV, imu_device);
+	int fd;
+    
+	/* get dev full path */
+	snprintf(*fname_path, sizeof(*fname_path), "%s%d", IMU_DEV, imu_device);
+	
+	if ((fd = open(*fname_path, O_RDONLY)) < 0) {
+	    perror("evdev open");
+	    exit(1);
+	}
 
-    return fname_path;
+    return fd;
 }
 
 /*
  * Get Accelerometer raw values in g linear acceleration
  */
 
-static int get_Accel_raw()
+static void get_AccRaw(int fd, int *AccelRaw)
 {
-    int AccelRaw[3];
-	struct Accel Accel;
-    struct input_absinfo acc_absinfo;
-
     int i;
+	struct input_absinfo acc_absinfo;
 
     // Limit scan to X, Y and Z axis as Accel only use those one.
     for (i = 0; i < ACC_AXIS; i++)
@@ -107,20 +102,16 @@ static int get_Accel_raw()
         }
         AccelRaw[i] = absinfo.value;
     }
-
-    return AccelRaw;
 }
 
-static float get_Acc_Angles(int accRaw[3])
+static void get_AccAngles(int accRaw[3], int *AccelAngle)
 {
     float AccelAngle[3];
 
 	//Convert Accelerometer values to degrees
-	AccAngle[0] = (float) (atan2(accRaw[1],accRaw[2])+M_PI)*RAD_TO_DEG;
-    AccAngle[1] = (float) (atan2(accRaw[2],accRaw[0])+M_PI)*RAD_TO_DEG;
-	AccAngle[2] = (float) (atan2(accRaw[1],accRaw[0])+M_PI)*RAD_TO_DEG;
-
-	return AccAngle;
+	AccelAngle[0] = (float) (atan2(accRaw[1],accRaw[2])+M_PI)*RAD_TO_DEG;
+    AccelAngle[1] = (float) (atan2(accRaw[2],accRaw[0])+M_PI)*RAD_TO_DEG;
+	AccelAngle[2] = (float) (atan2(accRaw[1],accRaw[0])+M_PI)*RAD_TO_DEG;
 }
 /***************************************************************************************/
 /***************************************************************************************/
