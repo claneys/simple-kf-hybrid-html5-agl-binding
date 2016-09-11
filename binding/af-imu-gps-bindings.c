@@ -122,7 +122,7 @@ static int open_dev(int imu_device)
 /*!
  * @brief Get every datas from the accelerometer.
  */
-static accelerometer_datas get_accelerometer()
+static accelerometer_datas get_accelerometer(int fd)
 {
     int i;
 	struct accelerometer_datas AccelRaw;
@@ -144,7 +144,9 @@ static accelerometer_datas get_accelerometer()
 
 static void verb_get_accelerometer(struct afb_req req)
 {
-	accelerometer_datas value = get_accelerometer();
+	int fd;
+	fd = open_dev(IMU_ACC);
+	accelerometer_datas value = get_accelerometer(fd);
 	json_object* json = accelerometer_datas_to_json(&value);
 	afb_req_success(req, json, NULL);
 	json_object_put(json);
